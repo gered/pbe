@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Posts With Tag {{ tag }}{% endblock title %}
+{% block content %}
+<header>
+	<h1>Posts With Tag "{{ tag }}"</h1>
+</header>
+
+<table>
+	{% for post in posts %}
+	<tr>
+		<td><time>{{ post.date }}</time></td>
+		<td><a href="{{ post.url }}">{{ post.title }}</a></td>
+	</tr>
+	{% endfor %}
+</table>
+{% endblock content %}

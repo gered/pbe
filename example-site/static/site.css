@@ -1,0 +1,45 @@
+body {
+    font-family: sans-serif;
+}
+
+main {
+    padding-bottom: 1em;
+}
+
+footer {
+    color: #777777;
+    font-style: italic;
+}
+
+.meta {
+    font-style: italic;
+}
+
+.tags > span {
+    margin: auto 2px;
+    padding: 1px;
+    background-color: #eeeeee;
+}
+
+.tags > span > a {
+    color: #555555;
+}
+
+.tags > span > a:visited {
+    color: #888888;
+}
+
+blockquote {
+    padding: 3px;
+    background-color: #dddddd;
+    border-left: 5px solid #888888;
+}
+
+table {
+    border-collapse: collapse;
+    margin-bottom: 1em;
+}
+
+table td, table th {
+    border: 1px solid #dddddd;
+}

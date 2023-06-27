@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Posts Archive{% endblock title %}
+{% block content %}
+<header>
+	<h1>Posts Archive</h1>
+</header>
+
+<table>
+	{% for post in posts %}
+	<tr>
+		<td><time>{{ post.date }}</time></td>
+		<td>
+			<a href="{{ post.url }}">{{ post.title }}</a>
+			<span class="tags">
+				{%- for tag in post.tags -%}
+				<span><a href="/tag/{{ tag }}/">{{ tag }}</a></span>
+				{%- endfor -%}
+			</span>
+		</td>
+	</tr>
+	{% endfor %}
+</table>
+{% endblock content %}
