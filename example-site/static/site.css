@@ -42,4 +42,5 @@ table {
 
 table td, table th {
     border: 1px solid #dddddd;
+    padding: 2px;
 }
