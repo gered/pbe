@@ -45,28 +45,28 @@ pub enum SiteError {
 	TeraError(#[from] tera::Error),
 }
 
-pub struct OldUrlMappings {
+pub struct AlternateUrlMappings {
 	mapping: HashMap<UriPath, UriPath>,
 }
 
-impl OldUrlMappings {
+impl AlternateUrlMappings {
 	pub fn new() -> Self {
-		OldUrlMappings { mapping: HashMap::new() }
+		AlternateUrlMappings { mapping: HashMap::new() }
 	}
 
 	#[inline]
-	pub fn get(&self, old_url: &UriPath) -> Option<&UriPath> {
-		self.mapping.get(old_url)
+	pub fn get(&self, alternate_url: &UriPath) -> Option<&UriPath> {
+		self.mapping.get(alternate_url)
 	}
 
 	#[inline]
-	pub fn add_mapping(&mut self, old_url: &UriPath, new_url: &UriPath) {
-		self.mapping.insert(old_url.clone(), new_url.clone());
+	pub fn add_mapping(&mut self, alternate_url: &UriPath, current_url: &UriPath) {
+		self.mapping.insert(alternate_url.clone(), current_url.clone());
 	}
 
-	pub fn add_mappings(&mut self, old_urls: &[UriPath], new_url: &UriPath) {
-		for old_url in old_urls.iter() {
-			self.add_mapping(old_url, new_url);
+	pub fn add_mappings(&mut self, alternate_urls: &[UriPath], current_url: &UriPath) {
+		for url in alternate_urls.iter() {
+			self.add_mapping(url, current_url);
 		}
 	}
 }
@@ -176,14 +176,14 @@ pub struct SiteContent {
 	pub posts: Vec<Post>,
 	pub pages_by_url: HashMap<UriPath, usize>,
 	pub posts_by_url: HashMap<UriPath, usize>,
-	pub old_url_mappings: OldUrlMappings,
+	pub alternate_url_mappings: AlternateUrlMappings,
 	pub post_tag_mappings: PostsByTag,
 	pub rss: RssMetadata,
 }
 
 impl SiteContent {
 	pub fn new(pages_config: config::Pages, posts_config: config::Posts) -> Result<Self, SiteError> {
-		let mut old_url_mappings = OldUrlMappings::new();
+		let mut alternate_url_mappings = AlternateUrlMappings::new();
 		let mut post_tag_mappings = PostsByTag::new();
 
 		// load pages
@@ -192,8 +192,8 @@ impl SiteContent {
 		for (index, page_config) in pages_config.pages.iter().enumerate() {
 			let page = Page::try_from(page_config.clone())?;
 
-			if let Some(old_urls) = &page_config.old_urls {
-				old_url_mappings.add_mappings(old_urls, &page.url);
+			if let Some(old_urls) = &page_config.alternate_urls {
+				alternate_url_mappings.add_mappings(old_urls, &page.url);
 			}
 
 			pages_by_url.insert(page.url.clone(), index);
@@ -207,8 +207,8 @@ impl SiteContent {
 		for (index, post_config) in posts_config.posts.iter().sorted_by(|a, b| b.date.cmp(&a.date)).enumerate() {
 			let post = Post::try_from(post_config.clone())?;
 
-			if let Some(old_urls) = &post_config.old_urls {
-				old_url_mappings.add_mappings(old_urls, &post.url);
+			if let Some(old_urls) = &post_config.alternate_urls {
+				alternate_url_mappings.add_mappings(old_urls, &post.url);
 			}
 
 			posts_by_url.insert(post.url.clone(), index);
@@ -218,7 +218,7 @@ impl SiteContent {
 
 		let rss = RssMetadata::from(posts_config.rss);
 
-		Ok(SiteContent { pages, posts, pages_by_url, posts_by_url, old_url_mappings, post_tag_mappings, rss })
+		Ok(SiteContent { pages, posts, pages_by_url, posts_by_url, alternate_url_mappings, post_tag_mappings, rss })
 	}
 
 	pub fn get_page_by_url(&self, url: &UriPath) -> Option<&Page> {
@@ -230,7 +230,7 @@ impl SiteContent {
 	}
 
 	pub fn get_content_at(&self, url: &UriPath) -> Option<Content> {
-		if let Some(new_url) = self.old_url_mappings.get(url) {
+		if let Some(new_url) = self.alternate_url_mappings.get(url) {
 			Some(Content::Redirect(new_url.clone()))
 		} else if let Some(post) = self.get_post_by_url(url) {
 			Some(Content::Post(post))

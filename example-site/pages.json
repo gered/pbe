@@ -9,7 +9,7 @@
       "file_path": "joke.md",
       "title": "Joke",
       "url": "/joke/",
-      "old_urls": ["/trying-to-be-funny/"]
+      "alternate_urls": ["/trying-to-be-funny/"]
     }
   ]
 }
