@@ -71,32 +71,31 @@ impl OldUrlMappings {
 	}
 }
 
-pub struct UrlsByTag {
-	mapping: HashMap<Tag, Vec<UriPath>>,
+pub struct PostsByTag {
+	mapping: HashMap<Tag, Vec<usize>>,
 }
 
-impl UrlsByTag {
+impl PostsByTag {
 	pub fn new() -> Self {
-		UrlsByTag { mapping: HashMap::new() }
+		PostsByTag { mapping: HashMap::new() }
 	}
 
 	#[inline]
-	pub fn get(&self, tag: &Tag) -> Option<&[UriPath]> {
+	pub fn get(&self, tag: &Tag) -> Option<&[usize]> {
 		self.mapping.get(tag).map(|x| x.as_slice())
 	}
 
-	pub fn add_mapping(&mut self, url: &UriPath, tag: &Tag) {
-		if let Some(urls) = self.mapping.get_mut(tag) {
-			urls.push(url.clone());
+	pub fn add_mapping(&mut self, post_index: usize, tag: &Tag) {
+		if let Some(indices) = self.mapping.get_mut(tag) {
+			indices.push(post_index);
 		} else {
-			let urls = vec![url.clone()];
-			self.mapping.insert(tag.clone(), urls);
+			self.mapping.insert(tag.clone(), vec![post_index]);
 		}
 	}
 
-	pub fn add_mappings(&mut self, url: &UriPath, tags: &[Tag]) {
+	pub fn add_mappings(&mut self, post_index: usize, tags: &[Tag]) {
 		for tag in tags.iter() {
-			self.add_mapping(url, tag);
+			self.add_mapping(post_index, tag);
 		}
 	}
 }
@@ -173,84 +172,91 @@ pub enum Content<'a> {
 }
 
 pub struct SiteContent {
-	pub pages: HashMap<UriPath, Page>,
-	pub posts: HashMap<UriPath, Post>,
+	pub pages: Vec<Page>,
+	pub posts: Vec<Post>,
+	pub pages_by_url: HashMap<UriPath, usize>,
+	pub posts_by_url: HashMap<UriPath, usize>,
 	pub old_url_mappings: OldUrlMappings,
-	pub post_tag_mappings: UrlsByTag,
-	pub sorted_post_urls: Vec<UriPath>,
+	pub post_tag_mappings: PostsByTag,
 	pub rss: RssMetadata,
 }
 
 impl SiteContent {
 	pub fn new(pages_config: config::Pages, posts_config: config::Posts) -> Result<Self, SiteError> {
 		let mut old_url_mappings = OldUrlMappings::new();
-		let mut post_tag_mappings = UrlsByTag::new();
-		let mut sorted_post_urls = Vec::<UriPath>::new();
+		let mut post_tag_mappings = PostsByTag::new();
 
 		// load pages
-		let mut pages = HashMap::<UriPath, Page>::new();
-		for page_config in pages_config.pages.iter() {
+		let mut pages = Vec::new();
+		let mut pages_by_url = HashMap::new();
+		for (index, page_config) in pages_config.pages.iter().enumerate() {
 			let page = Page::try_from(page_config.clone())?;
 
 			if let Some(old_urls) = &page_config.old_urls {
 				old_url_mappings.add_mappings(old_urls, &page.url);
 			}
 
-			pages.insert(page.url.clone(), page);
+			pages_by_url.insert(page.url.clone(), index);
+			pages.push(page);
 		}
 
-		// load posts
-		let mut posts = HashMap::<UriPath, Post>::new();
-		for post_config in posts_config.posts.iter() {
+		// load posts, iterating over the config's list of posts in descending order by date so that
+		// our final post list is pre-sorted this way, as well as the post lists per tag
+		let mut posts = Vec::new();
+		let mut posts_by_url = HashMap::new();
+		for (index, post_config) in posts_config.posts.iter().sorted_by(|a, b| b.date.cmp(&a.date)).enumerate() {
 			let post = Post::try_from(post_config.clone())?;
 
 			if let Some(old_urls) = &post_config.old_urls {
 				old_url_mappings.add_mappings(old_urls, &post.url);
 			}
 
-			posts.insert(post.url.clone(), post);
-		}
-
-		// build pre-sorted post urls table. as well, build the post url by tag mapping here so that
-		// the post urls for each tag will already be ordered by date
-		for post in posts.values().sorted_by(|a, b| b.date.cmp(&a.date)) {
-			sorted_post_urls.push(post.url.clone());
-			post_tag_mappings.add_mappings(&post.url, &post.tags);
+			posts_by_url.insert(post.url.clone(), index);
+			post_tag_mappings.add_mappings(index, &post.tags);
+			posts.push(post);
 		}
 
 		let rss = RssMetadata::from(posts_config.rss);
 
-		Ok(SiteContent { pages, posts, old_url_mappings, post_tag_mappings, sorted_post_urls, rss })
+		Ok(SiteContent { pages, posts, pages_by_url, posts_by_url, old_url_mappings, post_tag_mappings, rss })
+	}
+
+	pub fn get_page_by_url(&self, url: &UriPath) -> Option<&Page> {
+		self.pages_by_url.get(url).map(|index| self.pages.get(*index).unwrap())
+	}
+
+	pub fn get_post_by_url(&self, url: &UriPath) -> Option<&Post> {
+		self.posts_by_url.get(url).map(|index| self.posts.get(*index).unwrap())
 	}
 
 	pub fn get_content_at(&self, url: &UriPath) -> Option<Content> {
 		if let Some(new_url) = self.old_url_mappings.get(url) {
 			Some(Content::Redirect(new_url.clone()))
-		} else if let Some(post) = self.posts.get(url) {
+		} else if let Some(post) = self.get_post_by_url(url) {
 			Some(Content::Post(post))
-		} else if let Some(page) = self.pages.get(url) {
+		} else if let Some(page) = self.get_page_by_url(url) {
 			Some(Content::Page(page))
 		} else {
 			None
 		}
 	}
 
-	pub fn get_posts_ordered_by_date(&self) -> Vec<&Post> {
-		self.sorted_post_urls.iter().map(|post_url| self.posts.get(post_url).unwrap()).collect()
+	pub fn get_posts_ordered_by_date(&self) -> &[Post] {
+		self.posts.as_slice()
 	}
 
 	pub fn get_posts_with_tag_ordered_by_date(&self, tag: &Tag) -> Vec<&Post> {
 		let mut posts = Vec::new();
-		if let Some(post_urls) = self.post_tag_mappings.get(tag) {
-			for url in post_urls.iter() {
-				posts.push(self.posts.get(url).unwrap())
+		if let Some(post_indices) = self.post_tag_mappings.get(tag) {
+			for post_index in post_indices.iter() {
+				posts.push(self.posts.get(*post_index).unwrap())
 			}
 		}
 		posts
 	}
 
 	pub fn get_latest_post(&self) -> Option<&Post> {
-		self.sorted_post_urls.first().map(|post_url| self.posts.get(post_url).unwrap())
+		self.posts.first()
 	}
 }
 
