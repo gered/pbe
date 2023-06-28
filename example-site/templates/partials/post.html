@@ -2,7 +2,7 @@
 	<header>
 		<h1>{{ post.title }}</h1>
 		<div class="meta">
-			{{ post.date }} &mdash;
+			{{ post.date | date(format="%B %e, %Y") }} &mdash;
 			<span class="tags">
 				{%- for tag in post.tags -%}
 				<span><a href="/tag/{{ tag }}/">{{ tag }}</a></span>

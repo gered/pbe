@@ -3,7 +3,7 @@
     {
       "file_path": "2023-01-01-hello-world.md",
       "title": "Hello, world!",
-      "date": "2023-01-01",
+      "date": "2023-01-01 12:30:42",
       "slug": "hello-world",
       "tags": ["aaa", "hello", "testing"]
     },
@@ -17,7 +17,7 @@
     {
       "file_path": "2023-03-20-lorem-ipsum.md",
       "title": "Lorem Ipsum",
-      "date": "2023-03-20",
+      "date": "2023-03-20 18:01",
       "slug": "lorem-ipsum"
     },
     {

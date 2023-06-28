@@ -106,8 +106,8 @@ pub struct Post {
 	pub url: UriPath,
 	pub title: String,
 	pub content_html: String,
-	#[serde(serialize_with = "crate::util::serialize_naivedate")]
-	pub date: chrono::NaiveDate,
+	#[serde(serialize_with = "crate::util::serialize_naivedatetime_to_i64")]
+	pub date: chrono::NaiveDateTime,
 	pub tags: Vec<Tag>,
 }
 
@@ -327,7 +327,7 @@ impl SiteService {
 						.title(post.title.clone())
 						.content(post.content_html.clone())
 						.link(base_url.clone().join(&post.url).unwrap().to_string())
-						.pub_date(chrono::Local.from_local_date(&post.date).unwrap().to_string())
+						.pub_date(chrono::Local.from_local_datetime(&post.date).unwrap().to_string())
 						.build()
 				})
 				.collect::<Vec<rss::Item>>(),

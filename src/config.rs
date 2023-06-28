@@ -37,8 +37,8 @@ pub struct Pages {
 pub struct Post {
 	pub file_path: PathBuf,
 	pub title: String,
-	#[serde(deserialize_with = "crate::util::deserialize_naivedate")]
-	pub date: chrono::NaiveDate,
+	#[serde(deserialize_with = "crate::util::deserialize_string_to_naivedatetime")]
+	pub date: chrono::NaiveDateTime,
 	pub slug: String,
 	pub old_urls: Option<Vec<String>>,
 	pub tags: Option<Vec<String>>,
