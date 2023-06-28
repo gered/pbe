@@ -1,0 +1,47 @@
+posts:
+
+  - file_path: 2023-01-01-hello-world.md
+    title: Hello, world!
+    date: 2023-01-01 12:30:42
+    slug: hello-world
+    tags:
+      - aaa
+      - hello
+      - testing
+
+  - file_path: 2023-02-01-commonmark-testing.md
+    title: CommonMark Testing
+    date: 2023-02-01
+    slug: commonmark-testing
+    tags:
+      - testing
+    alternate_urls:
+      - /testing/commonmark/
+
+  - file_path: 2023-03-20-lorem-ipsum.md
+    title: Lorem Ipsum
+    date: 2023-03-20 18:01
+    slug: lorem-ipsum
+
+  - file_path: 2023-04-15-static-site-generators-are-boring.md
+    title: Static Site Generators Are Boring
+    date: 2023-04-15
+    slug: static-site-generators-are-boring
+    tags:
+      - aaa
+      - rant
+
+  - file_path: 2023-06-27-donuts-are-pretty-great.md
+    title: Donuts Are Pretty Great
+    date: 2023-06-27
+    slug: donuts-are-pretty-great
+    tags:
+      - aaa
+      - donuts
+      - coffee
+
+rss:
+  title: My Site
+  description: This is my site. There are others like it, but this one is mine.
+  url: http://localhost:8080/
+  count: 10

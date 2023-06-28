@@ -71,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
 	let first_arg = args.first().unwrap_or(&String::new()).to_lowercase();
 	if first_arg == "-h" || first_arg == "--help" {
 		println!("Usage: pbe <SITE_ROOT>");
-		println!("Where SITE_ROOT is a path that contains the json config files and all content and web resources.");
+		println!("Where SITE_ROOT is a path that contains the config files and all content and web resources.");
 		Ok(())
 	} else {
 		let site_root = if first_arg.is_empty() {
@@ -81,15 +81,15 @@ async fn main() -> anyhow::Result<()> {
 		};
 		log::info!("Using site root {:?}", site_root);
 
-		let server_config_path: PathBuf = [&site_root, &"server.json".into()].iter().collect();
-		let pages_config_path: PathBuf = [&site_root, &"pages.json".into()].iter().collect();
-		let posts_config_path: PathBuf = [&site_root, &"posts.json".into()].iter().collect();
+		let server_config_path: PathBuf = [&site_root, &"server.yml".into()].iter().collect();
+		let pages_config_path: PathBuf = [&site_root, &"pages.yml".into()].iter().collect();
+		let posts_config_path: PathBuf = [&site_root, &"posts.yml".into()].iter().collect();
 
 		log::info!("Loading config ...");
 		let server_config = config::load_server(&server_config_path, &site_root) //
-			.context("Loading server json config")?;
+			.context("Loading server config")?;
 		let (pages_config, posts_config) = config::load_content(&pages_config_path, &posts_config_path, &server_config) //
-			.context("Loading content json configs")?;
+			.context("Loading content configs")?;
 
 		log::info!("Initializing site data and content ...");
 		let site_service = site::SiteService::new(server_config.clone(), pages_config, posts_config)

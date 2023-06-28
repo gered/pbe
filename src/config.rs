@@ -52,28 +52,28 @@ pub struct Posts {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
-	#[error("Json config I/O error with path {0}")]
+	#[error("Config I/O error with path {0}")]
 	IOError(PathBuf, #[source] std::io::Error),
 
-	#[error("Json deserialization error: {0}")]
-	SerdeJsonError(String),
+	#[error("Deserialization error: {0}")]
+	SerdeError(String),
 }
 
-fn load_json_config<T>(path: &PathBuf) -> Result<T, ConfigError>
+fn load_config<T>(path: &PathBuf) -> Result<T, ConfigError>
 where
 	T: serde::de::DeserializeOwned,
 {
 	let file = File::open(path).map_err(|e| ConfigError::IOError(path.clone(), e))?;
 	let mut reader = BufReader::new(file);
-	match serde_json::from_reader(&mut reader) {
+	match serde_yaml::from_reader(&mut reader) {
 		Ok(deserialized) => Ok(deserialized),
-		Err(err) => Err(ConfigError::SerdeJsonError(err.to_string())),
+		Err(err) => Err(ConfigError::SerdeError(err.to_string())),
 	}
 }
 
 pub fn load_server(path: &PathBuf, site_root: &PathBuf) -> Result<Server, ConfigError> {
-	log::info!("Loading server json config from {:?}", path);
-	let mut server_config: Server = load_json_config(path)?;
+	log::info!("Loading server config from {:?}", path);
+	let mut server_config: Server = load_config(path)?;
 	server_config.static_files_path = [site_root, &server_config.static_files_path].iter().collect();
 	server_config.templates_path = [site_root, &server_config.templates_path].iter().collect();
 	server_config.pages_path = [site_root, &server_config.pages_path].iter().collect();
@@ -86,13 +86,13 @@ pub fn load_content(
 	posts_path: &PathBuf,
 	server_config: &Server,
 ) -> Result<(Pages, Posts), ConfigError> {
-	log::info!("Loading pages json config from {:?}", pages_path);
-	let mut pages: Pages = load_json_config(pages_path)?;
+	log::info!("Loading pages config from {:?}", pages_path);
+	let mut pages: Pages = load_config(pages_path)?;
 	for page in pages.pages.iter_mut() {
 		page.file_path = [&server_config.pages_path, &page.file_path].iter().collect();
 	}
-	log::info!("Loading posts json config from {:?}", posts_path);
-	let mut posts: Posts = load_json_config(posts_path)?;
+	log::info!("Loading posts config from {:?}", posts_path);
+	let mut posts: Posts = load_config(posts_path)?;
 	for post in posts.posts.iter_mut() {
 		post.file_path = [&server_config.posts_path, &post.file_path].iter().collect();
 	}
