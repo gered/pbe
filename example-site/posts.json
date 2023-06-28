@@ -12,7 +12,8 @@
       "title": "CommonMark Testing",
       "date": "2023-02-01",
       "slug": "commonmark-testing",
-      "tags": ["testing"]
+      "tags": ["testing"],
+      "old_urls": ["/testing/commonmark/"]
     },
     {
       "file_path": "2023-03-20-lorem-ipsum.md",

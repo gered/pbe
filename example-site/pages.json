@@ -4,6 +4,12 @@
       "file_path": "about.md",
       "title": "About This Site",
       "url": "/about/"
+    },
+    {
+      "file_path": "joke.md",
+      "title": "Joke",
+      "url": "/joke/",
+      "old_urls": ["/trying-to-be-funny/"]
     }
   ]
 }
