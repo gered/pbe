@@ -28,11 +28,3 @@ pub fn serialize_naivedatetime_to_i64<S: serde::Serializer>(
 ) -> Result<S::Ok, S::Error> {
 	serializer.serialize_i64(value.timestamp())
 }
-
-pub fn safe_subslice<T>(slice: &[T], start: usize, count: usize) -> Option<&[T]> {
-	if start >= slice.len() {
-		return None;
-	}
-	let end = std::cmp::min(start + count - 1, slice.len() - 1);
-	Some(&slice[start..=end])
-}

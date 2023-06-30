@@ -7,7 +7,7 @@ use actix_web::{Either, HttpRequest, HttpResponse};
 use chrono::{Datelike, TimeZone};
 use itertools::Itertools;
 
-use crate::{commonmark, config, util};
+use crate::{commonmark, config};
 
 type UriPath = String;
 type Tag = String;
