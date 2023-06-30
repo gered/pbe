@@ -1,0 +1,72 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+name: QBasic
+file_extensions:
+  - bas
+  - qb
+scope: source.qbasic
+contexts:
+  main:
+    - match: (').*
+      comment: Comment
+      scope: comment.line.qbasic
+      captures:
+        1: punctuation.definition.comment.qbasic
+    - match: "[,:;]"
+      comment: Delimiter
+      scope: meta.delimiter.object.qbasic
+    - match: \b((END )?IF|(END )?SELECT|(RESUME )?NEXT|CASE|CLOSE|DO|ELSE|FOR|GOSUB|GOTO|LOOP|ON|OPEN|RETURN|THEN|TO|UNTIL|WHILE)\b
+      comment: Keyword
+      scope: keyword.control.qbasic
+    - match: (\+|=|<|>|<>|AND|OR)
+      comment: Operator
+      scope: keyword.operator.qbasic
+    - match: \b(CHR\$|CLS|COLOR|DATA|INPUT|INT|KEY|LEN|LINE|LOCATE|PALETTE|PLAY|PRINT|PSET|PUT|REDIM|RND|SCREEN|TAB|VIEW)\b
+      comment: Function
+      scope: support.function.qbasic
+    - match: \b(\d(\.\d)?)+
+      comment: Numeric
+      scope: constant.numeric.qbasic
+    - match: \b\w+\$
+      comment: Global
+      scope: constant.global.qbasic
+    - match: '^(\w+):'
+      comment: SUB
+      scope: meta.function.qbasic
+      captures:
+        1: entity.name.function.qbasic
+    - match: '[\(\)]'
+      comment: Brace, round
+      scope: meta.brace.round.qbasic
+    - match: '[\{\}]'
+      comment: Brace, curly
+      scope: meta.brace.curly.qbasic
+    - match: (\w+\()
+      comment: Array
+      captures:
+        1: constant.array.qbasic
+      push:
+        - meta_scope: other.array.qbasic
+        - match: (\))
+          captures:
+            1: constant.array.qbasic
+          pop: true
+        - include: main
+    - match: (")
+      comment: String, double-quoted
+      captures:
+        1: punctuation.definition.string.begin.qbasic
+      push:
+        - meta_scope: string.quoted.double.qbasic
+        - match: (")
+          captures:
+            1: punctuation.definition.string.begin.qbasic
+          pop: true
+        - match: (\\")
+          comment: Escaped double-quote inside double-quoted string
+          scope: constant.character.escape.qbasic
+        - match: (')
+          comment: Single quote inside double-quoted string
+          scope: other.qbasic
+        - include: main

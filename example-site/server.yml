@@ -4,3 +4,4 @@ static_files_path: static
 templates_path: templates
 pages_path: pages
 posts_path: posts
+syntaxes_path: syntaxes

@@ -40,6 +40,14 @@ posts:
       - donuts
       - coffee
 
+  - file_path: 2023-06-30-qbasic-is-fun.md
+    title: QBasic Is Fun
+    date: 2023-06-30
+    slug: qbasic-is-fun
+    tags:
+      - qbasic
+      - testing
+
 rss:
   title: My Site
   description: This is my site. There are others like it, but this one is mine.
