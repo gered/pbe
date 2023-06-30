@@ -1,4 +1,4 @@
-Here we test some [CommonMark](https://commonmark.org/) things, gloriously rendered via the
+Here we test some Markdown (actually, [CommonMark](https://commonmark.org/)) things, gloriously rendered via the
 [pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) crate!
 
 ---

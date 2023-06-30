@@ -9,14 +9,14 @@ posts:
       - hello
       - testing
 
-  - file_path: 2023-02-01-commonmark-testing.md
-    title: CommonMark Testing
+  - file_path: 2023-02-01-markdown-testing.md
+    title: Markdown Testing
     date: 2023-02-01
-    slug: commonmark-testing
+    slug: markdown-testing
     tags:
       - testing
     alternate_urls:
-      - /testing/commonmark/
+      - /testing/markdown/
 
   - file_path: 2023-03-20-lorem-ipsum.md
     title: Lorem Ipsum

@@ -7,7 +7,7 @@ use actix_web::{Either, HttpRequest, HttpResponse};
 use chrono::{Datelike, TimeZone};
 use itertools::Itertools;
 
-use crate::{commonmark, config};
+use crate::{config, markdown};
 
 type UriPath = String;
 type Tag = String;
@@ -17,17 +17,17 @@ pub enum ContentError {
 	#[error("Content rendering I/O error with path {0}")]
 	IOError(PathBuf, #[source] std::io::Error),
 
-	#[error("CommonMark rendering error with path {0}")]
-	CommonMarkError(PathBuf, #[source] commonmark::CommonMarkError),
+	#[error("Markdown rendering error with path {0}")]
+	MarkdownError(PathBuf, #[source] markdown::MarkdownError),
 }
 
 pub struct ContentRenderer {
-	commonmark_renderer: commonmark::CommonMarkRenderer,
+	markdown_renderer: markdown::MarkdownRenderer,
 }
 
 impl ContentRenderer {
 	pub fn new() -> Result<Self, ContentError> {
-		Ok(ContentRenderer { commonmark_renderer: commonmark::CommonMarkRenderer::new() })
+		Ok(ContentRenderer { markdown_renderer: markdown::MarkdownRenderer::new() })
 	}
 
 	pub fn render(&self, path: &PathBuf) -> Result<String, ContentError> {
@@ -36,8 +36,8 @@ impl ContentRenderer {
 			Ok(s) => s,
 		};
 		match path.extension().unwrap_or_default().to_str() {
-			Some("md") => match self.commonmark_renderer.render_to_html(&raw_content) {
-				Err(e) => return Err(ContentError::CommonMarkError(path.clone(), e)),
+			Some("md") => match self.markdown_renderer.render_to_html(&raw_content) {
+				Err(e) => return Err(ContentError::MarkdownError(path.clone(), e)),
 				Ok(output) => Ok(output),
 			},
 			Some("html") | Some("htm") => Ok(raw_content),

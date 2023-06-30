@@ -5,8 +5,8 @@ use anyhow::Context;
 use std::env;
 use std::path::{Path, PathBuf};
 
-mod commonmark;
 mod config;
+mod markdown;
 mod site;
 mod util;
 

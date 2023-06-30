@@ -4,7 +4,7 @@ use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 
 #[derive(Debug, thiserror::Error)]
-pub enum CommonMarkError {
+pub enum MarkdownError {
 	#[error("Syntax highlighting error")]
 	SyntectError(#[from] syntect::Error),
 }
@@ -13,17 +13,17 @@ struct SyntectContext {
 	syntax_set: SyntaxSet,
 }
 
-pub struct CommonMarkRenderer {
+pub struct MarkdownRenderer {
 	syntect_context: SyntectContext,
 }
 
-impl CommonMarkRenderer {
+impl MarkdownRenderer {
 	pub fn new() -> Self {
 		let syntax_set = SyntaxSet::load_defaults_newlines();
-		CommonMarkRenderer { syntect_context: SyntectContext { syntax_set } }
+		MarkdownRenderer { syntect_context: SyntectContext { syntax_set } }
 	}
 
-	fn highlight_code(&self, code: &str, language: &str) -> Result<String, CommonMarkError> {
+	fn highlight_code(&self, code: &str, language: &str) -> Result<String, MarkdownError> {
 		let syntax = self
 			.syntect_context
 			.syntax_set
@@ -44,7 +44,7 @@ impl CommonMarkRenderer {
 	fn highlight_codeblocks<'input>(
 		&self,
 		events: Parser<'input, '_>,
-	) -> Result<impl Iterator<Item = Event<'input>> + 'input, CommonMarkError> {
+	) -> Result<impl Iterator<Item = Event<'input>> + 'input, MarkdownError> {
 		let mut modified_events = Vec::new();
 		let mut code_buffer = String::new();
 		let mut is_in_code_block = false;
@@ -81,7 +81,7 @@ impl CommonMarkRenderer {
 		Ok(modified_events.into_iter())
 	}
 
-	pub fn render_to_html(&self, s: &str) -> Result<String, CommonMarkError> {
+	pub fn render_to_html(&self, s: &str) -> Result<String, MarkdownError> {
 		let parser = Parser::new_ext(s, pulldown_cmark::Options::all());
 		let events = self.highlight_codeblocks(parser)?;
 		let mut output = String::new();
