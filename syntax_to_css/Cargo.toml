@@ -1,0 +1,9 @@
+[package]
+name = "syntax_to_css"
+description = "Simple CLI utility to convert a Sublime Text theme to a CSS file, for use with rendering via syntect."
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.71"
+syntect = "5.0.0"
