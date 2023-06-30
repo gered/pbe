@@ -17,8 +17,11 @@ pub enum ContentError {
 	#[error("Content rendering I/O error with path {0}")]
 	IOError(PathBuf, #[source] std::io::Error),
 
+	#[error("Markdown error")]
+	MarkdownError(#[from] markdown::MarkdownError),
+
 	#[error("Markdown rendering error with path {0}")]
-	MarkdownError(PathBuf, #[source] markdown::MarkdownError),
+	MarkdownRenderingError(PathBuf, #[source] markdown::MarkdownError),
 }
 
 pub struct ContentRenderer {
@@ -26,8 +29,11 @@ pub struct ContentRenderer {
 }
 
 impl ContentRenderer {
-	pub fn new() -> Result<Self, ContentError> {
-		Ok(ContentRenderer { markdown_renderer: markdown::MarkdownRenderer::new() })
+	pub fn new(server_config: &config::Server) -> Result<Self, ContentError> {
+		Ok(ContentRenderer {
+			//
+			markdown_renderer: markdown::MarkdownRenderer::new(server_config)?,
+		})
 	}
 
 	pub fn render(&self, path: &PathBuf) -> Result<String, ContentError> {
@@ -37,7 +43,7 @@ impl ContentRenderer {
 		};
 		match path.extension().unwrap_or_default().to_str() {
 			Some("md") => match self.markdown_renderer.render_to_html(&raw_content) {
-				Err(e) => return Err(ContentError::MarkdownError(path.clone(), e)),
+				Err(e) => return Err(ContentError::MarkdownRenderingError(path.clone(), e)),
 				Ok(output) => Ok(output),
 			},
 			Some("html") | Some("htm") => Ok(raw_content),
@@ -283,7 +289,7 @@ impl SiteService {
 		pages_config: config::Pages,
 		posts_config: config::Posts,
 	) -> Result<Self, SiteError> {
-		let content_renderer = ContentRenderer::new()?;
+		let content_renderer = ContentRenderer::new(&server_config)?;
 		let content = SiteContent::new(pages_config, posts_config, &content_renderer)?;
 		let mut templates_path = PathBuf::from(&server_config.templates_path);
 		templates_path.push("**/*");

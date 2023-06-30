@@ -8,6 +8,7 @@ pub struct Server {
 	pub bind_port: u16,
 	pub static_files_path: PathBuf,
 	pub templates_path: PathBuf,
+	pub syntaxes_path: Option<PathBuf>,
 	pub pages_path: PathBuf,
 	pub posts_path: PathBuf,
 }
@@ -78,6 +79,9 @@ pub fn load_server(path: &PathBuf, site_root: &PathBuf) -> Result<Server, Config
 	server_config.templates_path = [site_root, &server_config.templates_path].iter().collect();
 	server_config.pages_path = [site_root, &server_config.pages_path].iter().collect();
 	server_config.posts_path = [site_root, &server_config.posts_path].iter().collect();
+	if let Some(syntaxes_path) = &server_config.syntaxes_path {
+		server_config.syntaxes_path = Some([site_root, syntaxes_path].iter().collect());
+	}
 	Ok(server_config)
 }
 

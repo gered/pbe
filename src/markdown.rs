@@ -1,12 +1,18 @@
+use itertools::Itertools;
 use pulldown_cmark::{CodeBlockKind, CowStr, Event, Parser, Tag};
 use syntect::html::{ClassStyle, ClassedHTMLGenerator};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 
+use crate::config;
+
 #[derive(Debug, thiserror::Error)]
 pub enum MarkdownError {
 	#[error("Syntax highlighting error")]
 	SyntectError(#[from] syntect::Error),
+
+	#[error("Syntax loading error")]
+	SyntectLoadingError(#[from] syntect::LoadingError),
 }
 
 struct SyntectContext {
@@ -18,9 +24,20 @@ pub struct MarkdownRenderer {
 }
 
 impl MarkdownRenderer {
-	pub fn new() -> Self {
-		let syntax_set = SyntaxSet::load_defaults_newlines();
-		MarkdownRenderer { syntect_context: SyntectContext { syntax_set } }
+	pub fn new(server_config: &config::Server) -> Result<Self, MarkdownError> {
+		let syntax_set = if let Some(syntaxes_path) = &server_config.syntaxes_path {
+			log::debug!("Using syntaxes path: {:?}", syntaxes_path);
+			let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
+			builder.add_from_folder(syntaxes_path, true)?;
+			builder.build()
+		} else {
+			log::debug!("Using default syntaxes only.");
+			SyntaxSet::load_defaults_newlines()
+		};
+		let syntax_names: Vec<&String> =
+			syntax_set.syntaxes().iter().flat_map(|syntax| &syntax.file_extensions).sorted().collect();
+		log::debug!("Syntaxes loaded: {:?}", syntax_names);
+		Ok(MarkdownRenderer { syntect_context: SyntectContext { syntax_set } })
 	}
 
 	fn highlight_code(&self, code: &str, language: &str) -> Result<String, MarkdownError> {
