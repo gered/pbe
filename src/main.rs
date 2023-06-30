@@ -5,6 +5,7 @@ use anyhow::Context;
 use std::env;
 use std::path::{Path, PathBuf};
 
+mod commonmark;
 mod config;
 mod site;
 mod util;

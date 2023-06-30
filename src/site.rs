@@ -7,7 +7,7 @@ use actix_web::{Either, HttpRequest, HttpResponse};
 use chrono::{Datelike, TimeZone};
 use itertools::Itertools;
 
-use crate::{config, util};
+use crate::{commonmark, config, util};
 
 type UriPath = String;
 type Tag = String;
@@ -16,23 +16,33 @@ type Tag = String;
 pub enum ContentError {
 	#[error("Content rendering I/O error with path {0}")]
 	IOError(PathBuf, #[source] std::io::Error),
+
+	#[error("CommonMark rendering error with path {0}")]
+	CommonMarkError(PathBuf, #[source] commonmark::CommonMarkError),
 }
 
-fn render_content(path: &PathBuf) -> Result<String, ContentError> {
-	let raw_content = match std::fs::read_to_string(path) {
-		Err(e) => return Err(ContentError::IOError(path.clone(), e)),
-		Ok(s) => s,
-	};
-	match path.extension().unwrap_or_default().to_str() {
-		Some("md") => {
-			let parser = pulldown_cmark::Parser::new_ext(&raw_content, pulldown_cmark::Options::all());
-			let mut output = String::new();
-			// TODO: use write_html() instead because that can actually return errors instead of just panicking
-			pulldown_cmark::html::push_html(&mut output, parser);
-			Ok(output)
+pub struct ContentRenderer {
+	commonmark_renderer: commonmark::CommonMarkRenderer,
+}
+
+impl ContentRenderer {
+	pub fn new() -> Result<Self, ContentError> {
+		Ok(ContentRenderer { commonmark_renderer: commonmark::CommonMarkRenderer::new() })
+	}
+
+	pub fn render(&self, path: &PathBuf) -> Result<String, ContentError> {
+		let raw_content = match std::fs::read_to_string(path) {
+			Err(e) => return Err(ContentError::IOError(path.clone(), e)),
+			Ok(s) => s,
+		};
+		match path.extension().unwrap_or_default().to_str() {
+			Some("md") => match self.commonmark_renderer.render_to_html(&raw_content) {
+				Err(e) => return Err(ContentError::CommonMarkError(path.clone(), e)),
+				Ok(output) => Ok(output),
+			},
+			Some("html") | Some("htm") => Ok(raw_content),
+			_ => Ok(raw_content),
 		}
-		Some("html") | Some("htm") => Ok(raw_content),
-		_ => Ok(raw_content),
 	}
 }
 
@@ -110,12 +120,10 @@ pub struct Post {
 	pub tags: Vec<Tag>,
 }
 
-impl TryFrom<config::Post> for Post {
-	type Error = SiteError;
-
-	fn try_from(value: config::Post) -> Result<Self, Self::Error> {
+impl Post {
+	pub fn try_from(value: config::Post, content_renderer: &ContentRenderer) -> Result<Self, SiteError> {
 		let url = format!("/{:04}/{:02}/{:02}/{}", value.date.year(), value.date.month(), value.date.day(), value.slug);
-		let content_html = render_content(&value.file_path)?;
+		let content_html = content_renderer.render(&value.file_path)?;
 		let tags = value.tags.map_or_else(|| Vec::new(), |x| x.clone());
 		Ok(Post {
 			url, //
@@ -134,11 +142,9 @@ pub struct Page {
 	pub content_html: String,
 }
 
-impl TryFrom<config::Page> for Page {
-	type Error = SiteError;
-
-	fn try_from(value: config::Page) -> Result<Self, Self::Error> {
-		let content_html = render_content(&value.file_path)?;
+impl Page {
+	pub fn try_from(value: config::Page, content_renderer: &ContentRenderer) -> Result<Self, SiteError> {
+		let content_html = content_renderer.render(&value.file_path)?;
 		Ok(Page {
 			url: value.url, //
 			title: value.title,
@@ -182,7 +188,11 @@ pub struct SiteContent {
 }
 
 impl SiteContent {
-	pub fn new(pages_config: config::Pages, posts_config: config::Posts) -> Result<Self, SiteError> {
+	pub fn new(
+		pages_config: config::Pages,
+		posts_config: config::Posts,
+		content_renderer: &ContentRenderer,
+	) -> Result<Self, SiteError> {
 		let mut alternate_url_mappings = AlternateUrlMappings::new();
 		let mut post_tag_mappings = PostsByTag::new();
 
@@ -190,7 +200,7 @@ impl SiteContent {
 		let mut pages = Vec::new();
 		let mut pages_by_url = HashMap::new();
 		for (index, page_config) in pages_config.pages.iter().enumerate() {
-			let page = Page::try_from(page_config.clone())?;
+			let page = Page::try_from(page_config.clone(), content_renderer)?;
 
 			if let Some(old_urls) = &page_config.alternate_urls {
 				alternate_url_mappings.add_mappings(old_urls, &page.url);
@@ -205,7 +215,7 @@ impl SiteContent {
 		let mut posts = Vec::new();
 		let mut posts_by_url = HashMap::new();
 		for (index, post_config) in posts_config.posts.iter().sorted_by(|a, b| b.date.cmp(&a.date)).enumerate() {
-			let post = Post::try_from(post_config.clone())?;
+			let post = Post::try_from(post_config.clone(), content_renderer)?;
 
 			if let Some(old_urls) = &post_config.alternate_urls {
 				alternate_url_mappings.add_mappings(old_urls, &post.url);
@@ -262,7 +272,8 @@ impl SiteContent {
 
 pub struct SiteService {
 	pub server_config: config::Server,
-	pub renderer: tera::Tera,
+	pub content_renderer: ContentRenderer,
+	pub template_renderer: tera::Tera,
 	pub content: RwLock<SiteContent>,
 }
 
@@ -272,7 +283,8 @@ impl SiteService {
 		pages_config: config::Pages,
 		posts_config: config::Posts,
 	) -> Result<Self, SiteError> {
-		let content = SiteContent::new(pages_config, posts_config)?;
+		let content_renderer = ContentRenderer::new()?;
+		let content = SiteContent::new(pages_config, posts_config, &content_renderer)?;
 		let mut templates_path = PathBuf::from(&server_config.templates_path);
 		templates_path.push("**/*");
 		log::debug!("Using templates path: {:?}", templates_path);
@@ -283,7 +295,8 @@ impl SiteService {
 		);
 		Ok(SiteService {
 			server_config, //
-			renderer,
+			content_renderer,
+			template_renderer: renderer,
 			content: RwLock::new(content),
 		})
 	}
@@ -295,7 +308,7 @@ impl SiteService {
 		if let Some(post) = post {
 			context.insert("post", post);
 		}
-		HttpResponse::Ok().body(self.renderer.render("post.html", &context).unwrap())
+		HttpResponse::Ok().body(self.template_renderer.render("post.html", &context).unwrap())
 	}
 
 	pub fn serve_posts_by_tag(&self, tag: &Tag) -> HttpResponse {
@@ -304,7 +317,7 @@ impl SiteService {
 		let mut context = tera::Context::new();
 		context.insert("tag", tag);
 		context.insert("posts", &posts);
-		HttpResponse::Ok().body(self.renderer.render("tag.html", &context).unwrap())
+		HttpResponse::Ok().body(self.template_renderer.render("tag.html", &context).unwrap())
 	}
 
 	pub fn serve_posts_archive(&self) -> HttpResponse {
@@ -312,7 +325,7 @@ impl SiteService {
 		let posts = content.get_posts_ordered_by_date();
 		let mut context = tera::Context::new();
 		context.insert("posts", &posts);
-		HttpResponse::Ok().body(self.renderer.render("archive.html", &context).unwrap())
+		HttpResponse::Ok().body(self.template_renderer.render("archive.html", &context).unwrap())
 	}
 
 	pub fn serve_rss_feed(&self) -> HttpResponse {
@@ -349,14 +362,14 @@ impl SiteService {
 				log::debug!("Found page content at {}", req.path());
 				let mut context = tera::Context::new();
 				context.insert("page", page);
-				let rendered = self.renderer.render("page.html", &context).unwrap();
+				let rendered = self.template_renderer.render("page.html", &context).unwrap();
 				Some(Either::Left(HttpResponse::Ok().body(rendered)))
 			}
 			Some(Content::Post(post)) => {
 				log::debug!("Found post content at {}", req.path());
 				let mut context = tera::Context::new();
 				context.insert("post", post);
-				let rendered = self.renderer.render("post.html", &context).unwrap();
+				let rendered = self.template_renderer.render("post.html", &context).unwrap();
 				Some(Either::Left(HttpResponse::Ok().body(rendered)))
 			}
 			Some(Content::Redirect(url)) => {
