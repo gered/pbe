@@ -405,3 +405,14 @@ those in `.tmTheme` format (`.sublime-theme` format themes are not supported).
 I've written a quick CLI utility to expose this functionality in syntect to make it easier to use as an end-user. This
 can be found in the "syntax_to_css" project within this repository. This tool will let you turn your `.tmTheme` files
 from Sublime Text into `.css` files which you can then use with PBE to style your syntax highlighted code blocks.
+
+---
+
+## Not-So-Frequently Asked Questions
+
+### Why not use a static site generator instead?
+
+If you want to use a static site generator, then that is what you should use! Absolutely!
+
+I find it a little boring personally, and I don't really care to learn how to use someone else's project for that.
+You'll probably never see me use a static site generator for my own personal use.
