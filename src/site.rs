@@ -185,6 +185,7 @@ pub enum Content<'a> {
 }
 
 pub struct SiteContent {
+	pub template_renderer: tera::Tera,
 	pub pages: Vec<Page>,
 	pub posts: Vec<Post>,
 	pub pages_by_url: HashMap<UriPath, usize>,
@@ -198,8 +199,18 @@ impl SiteContent {
 	pub fn new(
 		pages_config: config::Pages,
 		posts_config: config::Posts,
+		server_config: &config::Server,
 		content_renderer: &ContentRenderer,
 	) -> Result<Self, SiteError> {
+		let mut templates_path = PathBuf::from(&server_config.templates_path);
+		templates_path.push("**/*");
+		log::debug!("Using templates path: {:?}", templates_path);
+		let template_renderer = tera::Tera::new(templates_path.as_path().to_str().unwrap())?;
+		log::debug!(
+			"Templates loaded and parsed from the templates path: {:?}",
+			template_renderer.get_template_names().collect::<Vec<&str>>()
+		);
+
 		let mut alternate_url_mappings = AlternateUrlMappings::new();
 		let mut post_tag_mappings = PostsByTag::new();
 
@@ -235,7 +246,16 @@ impl SiteContent {
 
 		let rss = RssMetadata::from(posts_config.rss);
 
-		Ok(SiteContent { pages, posts, pages_by_url, posts_by_url, alternate_url_mappings, post_tag_mappings, rss })
+		Ok(SiteContent {
+			template_renderer,
+			pages,
+			posts,
+			pages_by_url,
+			posts_by_url,
+			alternate_url_mappings,
+			post_tag_mappings,
+			rss,
+		})
 	}
 
 	pub fn get_page_by_url(&self, url: &UriPath) -> Option<&Page> {
@@ -299,7 +319,6 @@ impl<T> Deref for RefreshWrapper<T> {
 pub struct SiteService {
 	pub server_config: config::Server,
 	pub content_renderer: ContentRenderer,
-	pub template_renderer: tera::Tera,
 	pub content: RwLock<RefreshWrapper<SiteContent>>,
 }
 
@@ -310,19 +329,11 @@ impl SiteService {
 		posts_config: config::Posts,
 	) -> Result<Self, SiteError> {
 		let content_renderer = ContentRenderer::new(&server_config)?;
-		let content = RefreshWrapper::new(SiteContent::new(pages_config, posts_config, &content_renderer)?);
-		let mut templates_path = PathBuf::from(&server_config.templates_path);
-		templates_path.push("**/*");
-		log::debug!("Using templates path: {:?}", templates_path);
-		let renderer = tera::Tera::new(templates_path.as_path().to_str().unwrap())?;
-		log::debug!(
-			"Templates loaded and parsed from the templates path: {:?}",
-			renderer.get_template_names().collect::<Vec<&str>>()
-		);
+		let content =
+			RefreshWrapper::new(SiteContent::new(pages_config, posts_config, &server_config, &content_renderer)?);
 		Ok(SiteService {
 			server_config, //
 			content_renderer,
-			template_renderer: renderer,
 			content: RwLock::new(content),
 		})
 	}
@@ -330,7 +341,7 @@ impl SiteService {
 	pub fn refresh_content(&self, pages_config: config::Pages, posts_config: config::Posts) -> Result<(), SiteError> {
 		let mut existing_content = self.content.write().expect("SiteContent write lock failed"); // TODO: better error handling
 		log::debug!("Obtained write lock on SiteContent instance");
-		let content = SiteContent::new(pages_config, posts_config, &self.content_renderer)?;
+		let content = SiteContent::new(pages_config, posts_config, &self.server_config, &self.content_renderer)?;
 		log::debug!("New SiteContent instance built successfully");
 		existing_content.data = content;
 		Ok(())
@@ -343,7 +354,7 @@ impl SiteService {
 		if let Some(post) = post {
 			context.insert("post", post);
 		}
-		HttpResponse::Ok().body(self.template_renderer.render("latest_post.html", &context).unwrap())
+		HttpResponse::Ok().body(content.template_renderer.render("latest_post.html", &context).unwrap())
 	}
 
 	pub fn serve_posts_by_tag(&self, tag: &Tag) -> HttpResponse {
@@ -352,7 +363,7 @@ impl SiteService {
 		let mut context = tera::Context::new();
 		context.insert("tag", tag);
 		context.insert("posts", &posts);
-		HttpResponse::Ok().body(self.template_renderer.render("tag.html", &context).unwrap())
+		HttpResponse::Ok().body(content.template_renderer.render("tag.html", &context).unwrap())
 	}
 
 	pub fn serve_posts_archive(&self) -> HttpResponse {
@@ -360,7 +371,7 @@ impl SiteService {
 		let posts = content.get_posts_ordered_by_date();
 		let mut context = tera::Context::new();
 		context.insert("posts", &posts);
-		HttpResponse::Ok().body(self.template_renderer.render("archive.html", &context).unwrap())
+		HttpResponse::Ok().body(content.template_renderer.render("archive.html", &context).unwrap())
 	}
 
 	pub fn serve_rss_feed(&self) -> HttpResponse {
@@ -397,14 +408,14 @@ impl SiteService {
 				log::debug!("Found page content at {}", req.path());
 				let mut context = tera::Context::new();
 				context.insert("page", page);
-				let rendered = self.template_renderer.render("page.html", &context).unwrap();
+				let rendered = content.template_renderer.render("page.html", &context).unwrap();
 				Some(Either::Left(HttpResponse::Ok().body(rendered)))
 			}
 			Some(Content::Post(post)) => {
 				log::debug!("Found post content at {}", req.path());
 				let mut context = tera::Context::new();
 				context.insert("post", post);
-				let rendered = self.template_renderer.render("post.html", &context).unwrap();
+				let rendered = content.template_renderer.render("post.html", &context).unwrap();
 				Some(Either::Left(HttpResponse::Ok().body(rendered)))
 			}
 			Some(Content::Redirect(url)) => {
