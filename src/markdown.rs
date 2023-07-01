@@ -55,7 +55,15 @@ impl MarkdownRenderer {
 		for line in LinesWithEndings::from(code) {
 			html_generator.parse_html_for_line_which_includes_newline(line)?;
 		}
-		Ok(format!("<pre><code>{}</code></pre>", html_generator.finalize()))
+		// the "sh-code" css class is what syntect will generate for the top-level code container that includes
+		// things like the background color and default text foreground color.
+		// the inner classname we're generating with the language included in it is not used for anything. it's
+		// just a marker that includes the name of the language syntax used
+		Ok(format!(
+			"<pre class=\"sh-code\"><code class=\"{}\">{}</code></pre>",
+			if !language.is_empty() { format!("syntax-{}", language) } else { String::new() },
+			html_generator.finalize()
+		))
 	}
 
 	fn highlight_codeblocks<'input>(
