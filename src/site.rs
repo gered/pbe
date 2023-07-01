@@ -343,7 +343,7 @@ impl SiteService {
 		if let Some(post) = post {
 			context.insert("post", post);
 		}
-		HttpResponse::Ok().body(self.template_renderer.render("post.html", &context).unwrap())
+		HttpResponse::Ok().body(self.template_renderer.render("latest_post.html", &context).unwrap())
 	}
 
 	pub fn serve_posts_by_tag(&self, tag: &Tag) -> HttpResponse {
