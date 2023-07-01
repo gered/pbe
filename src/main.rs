@@ -150,7 +150,15 @@ async fn main() -> anyhow::Result<()> {
 			.context("Constructing SiteService instance")?;
 		let data = web::Data::new(site_service);
 
-		let watch_paths = vec![pages_config_path.clone(), posts_config_path.clone()];
+		// note that we do not want to watch the static files path. there's no need, as nothing in there that is
+		// being cached by us here
+		let watch_paths = vec![
+			pages_config_path.clone(),
+			posts_config_path.clone(),
+			server_config.pages_path.clone(),
+			server_config.posts_path.clone(),
+			server_config.templates_path.clone(),
+		];
 		let watcher_handle = spawn_watcher(watch_paths, pages_config_path, posts_config_path, data.clone());
 
 		log::info!(
