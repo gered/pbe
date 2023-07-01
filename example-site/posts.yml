@@ -31,6 +31,13 @@ posts:
       - aaa
       - rant
 
+  - file_path: 2023-05-08-plain-html-content.html
+    title: Plain HTML Content
+    date: 2023-05-08
+    slug: plain-html-content
+    tags:
+      - testing
+
   - file_path: 2023-06-27-donuts-are-pretty-great.md
     title: Donuts Are Pretty Great
     date: 2023-06-27
