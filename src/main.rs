@@ -102,9 +102,10 @@ fn spawn_watcher(
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
+	let log_level = env::var("LOG_LEVEL").map_or(String::from("info"), |value| value.to_lowercase());
 	simple_log::new(
 		simple_log::LogConfigBuilder::builder() //
-			.level("debug")
+			.level(log_level)
 			.output_console()
 			.build(),
 	)
