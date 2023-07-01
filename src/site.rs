@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::RwLock;
 
@@ -276,11 +277,30 @@ impl SiteContent {
 	}
 }
 
+pub struct RefreshWrapper<T> {
+	pub data: T,
+}
+
+impl<T> RefreshWrapper<T> {
+	pub fn new(data: T) -> Self {
+		RefreshWrapper { data }
+	}
+}
+
+impl<T> Deref for RefreshWrapper<T> {
+	type Target = T;
+
+	#[inline]
+	fn deref(&self) -> &Self::Target {
+		&self.data
+	}
+}
+
 pub struct SiteService {
 	pub server_config: config::Server,
 	pub content_renderer: ContentRenderer,
 	pub template_renderer: tera::Tera,
-	pub content: RwLock<SiteContent>,
+	pub content: RwLock<RefreshWrapper<SiteContent>>,
 }
 
 impl SiteService {
@@ -290,7 +310,7 @@ impl SiteService {
 		posts_config: config::Posts,
 	) -> Result<Self, SiteError> {
 		let content_renderer = ContentRenderer::new(&server_config)?;
-		let content = SiteContent::new(pages_config, posts_config, &content_renderer)?;
+		let content = RefreshWrapper::new(SiteContent::new(pages_config, posts_config, &content_renderer)?);
 		let mut templates_path = PathBuf::from(&server_config.templates_path);
 		templates_path.push("**/*");
 		log::debug!("Using templates path: {:?}", templates_path);
@@ -305,6 +325,15 @@ impl SiteService {
 			template_renderer: renderer,
 			content: RwLock::new(content),
 		})
+	}
+
+	pub fn refresh_content(&self, pages_config: config::Pages, posts_config: config::Posts) -> Result<(), SiteError> {
+		let mut existing_content = self.content.write().expect("SiteContent write lock failed"); // TODO: better error handling
+		log::debug!("Obtained write lock on SiteContent instance");
+		let content = SiteContent::new(pages_config, posts_config, &self.content_renderer)?;
+		log::debug!("New SiteContent instance built successfully");
+		existing_content.data = content;
+		Ok(())
 	}
 
 	pub fn serve_latest_post(&self) -> HttpResponse {

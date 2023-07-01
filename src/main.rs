@@ -1,14 +1,16 @@
+use std::env;
+use std::path::{Path, PathBuf};
+
 use actix_files::Files;
 use actix_web::web::Redirect;
 use actix_web::{web, App, Either, HttpRequest, HttpResponse, HttpServer, Responder};
 use anyhow::Context;
-use std::env;
-use std::path::{Path, PathBuf};
 
 mod config;
 mod markdown;
 mod site;
 mod util;
+mod watcher;
 
 fn not_found() -> HttpResponse {
 	HttpResponse::NotFound().body("not found")
@@ -46,6 +48,56 @@ async fn site_content(req: HttpRequest, data: web::Data<site::SiteService>) -> E
 	} else {
 		Either::Left(not_found())
 	}
+}
+
+fn spawn_watcher(
+	watch_paths: Vec<PathBuf>,
+	pages_config_path: PathBuf,
+	posts_config_path: PathBuf,
+	data: web::Data<site::SiteService>,
+) -> tokio::task::JoinHandle<()> {
+	log::info!("Spawning filesystem watcher for paths {:?}", watch_paths);
+	tokio::spawn(async move {
+		watcher::debounce_watch(&watch_paths, move |event| {
+			match event {
+				Ok(_) => {
+					// right now we don't actually care which file was modified. just always rebuild the whole thing.
+					// this is also why using a debounced watch is important and probably should use a somewhat long
+					// debounce time in practice, just in case someone is doing a lengthy file upload to a remote
+					// server or something of that nature which takes more than 1-2 seconds.
+					// TODO: maybe try to selectively rebuild only what was changed? meh.
+					log::warn!(
+						"Modification to file(s) in watched paths detected, beginning re-generation of SiteContent"
+					);
+
+					log::info!("Reloading content configs");
+					let (pages_config, posts_config) =
+						match config::load_content(&pages_config_path, &posts_config_path, &data.server_config) {
+							Ok(configs) => configs,
+							Err(err) => {
+								log::error!("Error reloading content configs: {:?}", err);
+								return;
+							}
+						};
+
+					log::info!("Re-generating SiteContent");
+					if let Err(err) = data.refresh_content(pages_config, posts_config) {
+						log::error!("Error re-generating SiteContent: {:?}", err);
+						return;
+					}
+
+					log::info!("Finished re-generating SiteContent");
+				}
+				Err(errors) => {
+					for error in errors {
+						log::error!("debounce_watch event handler error: {:?}", error);
+					}
+				}
+			}
+		})
+		.await
+		.unwrap()
+	})
 }
 
 #[actix_web::main]
@@ -97,11 +149,15 @@ async fn main() -> anyhow::Result<()> {
 			.context("Constructing SiteService instance")?;
 		let data = web::Data::new(site_service);
 
+		let watch_paths = vec![pages_config_path.clone(), posts_config_path.clone()];
+		let watcher_handle = spawn_watcher(watch_paths, pages_config_path, posts_config_path, data.clone());
+
 		log::info!(
-			"Starting HTTP server for site, listening on {}:{} ...",
+			"Spawning HTTP server for site, listening on {}:{} ...",
 			server_config.bind_addr,
 			server_config.bind_port
 		);
+
 		HttpServer::new(move || {
 			App::new() //
 				.app_data(data.clone())
@@ -116,6 +172,12 @@ async fn main() -> anyhow::Result<()> {
 		.with_context(|| format!("Binding HTTP server on {}:{}", server_config.bind_addr, server_config.bind_port))?
 		.run()
 		.await
-		.map_err(anyhow::Error::from)
+		.map_err(anyhow::Error::from)?;
+
+		log::info!("Aborting filesystem watcher");
+		watcher_handle.abort();
+
+		log::info!("Finished!");
+		Ok(())
 	}
 }
