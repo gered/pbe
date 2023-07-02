@@ -3,6 +3,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::RwLock;
 
+use actix_web::http::StatusCode;
 use actix_web::web::Redirect;
 use actix_web::{Either, HttpRequest, HttpResponse};
 use chrono::{Datelike, TimeZone};
@@ -426,7 +427,7 @@ impl SiteService {
 			}
 			Some(Content::Redirect(url)) => {
 				log::debug!("Found redirect at {}", req.path());
-				Some(Either::Right(Redirect::to(url).permanent()))
+				Some(Either::Right(Redirect::to(url).using_status_code(StatusCode::MOVED_PERMANENTLY)))
 			}
 			None => {
 				log::debug!("No matching content at {}", req.path());
