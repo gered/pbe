@@ -129,7 +129,13 @@ pub struct Post {
 
 impl Post {
 	pub fn try_from(value: config::Post, content_renderer: &ContentRenderer) -> Result<Self, SiteError> {
-		let url = format!("/{:04}/{:02}/{:02}/{}", value.date.year(), value.date.month(), value.date.day(), value.slug);
+		let url = format!(
+			"/{:04}/{:02}/{:02}/{}/", //
+			value.date.year(),
+			value.date.month(),
+			value.date.day(),
+			value.slug
+		);
 		let content_html = content_renderer.render(&value.file_path)?;
 		let tags = value.tags.map_or_else(|| Vec::new(), |x| x.clone());
 		Ok(Post {
