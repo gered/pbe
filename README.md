@@ -31,7 +31,7 @@ pbe /path/to/example-site
 
 The argument provided to `pbe` is the **root site path**. If not specified, the current working directory is used.
 
-Once started up successfully, you can access this site in your browser at [http://localhost:8080/].
+Once started up successfully, you can access this site in your browser at http://localhost:8080/.
 
 ## Overview
 
@@ -102,7 +102,7 @@ This is the main configuration file which controls how the website is accessed a
 
 | Key                 | Required? | Description                                                                                                                                                                |
 |---------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `bind_addr`         | Yes       | The hostname/IP to bind the HTTP server on. Usual values would be something like `0.0.0.0` or `127.0.0.1`.                                                                 |
+| `bind_addr`         | Yes       | The IP address of the network interface to bind the HTTP server on. Usual values would be something like `0.0.0.0` or `127.0.0.1`.                                         |
 | `bind_port`         | Yes       | The port to bind the HTTP server on. For example, `8080`.                                                                                                                  |
 | `static_files_path` | Yes       | The **relative** path to the directory containing all public web accessible files, e.g. CSS files, images, etc.                                                            |
 | `templates_path`    | Yes       | The **relative** path to the directory containing all HTML templates.                                                                                                      |
