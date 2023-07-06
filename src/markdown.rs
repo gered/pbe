@@ -107,7 +107,9 @@ impl MarkdownRenderer {
 	}
 
 	pub fn render_to_html(&self, s: &str) -> Result<String, MarkdownError> {
-		let parser = Parser::new_ext(s, pulldown_cmark::Options::all());
+		let mut options = pulldown_cmark::Options::all();
+		options.set(pulldown_cmark::Options::ENABLE_SMART_PUNCTUATION, false);
+		let parser = Parser::new_ext(s, options);
 		let events = self.highlight_codeblocks(parser)?;
 		let mut output = String::new();
 		pulldown_cmark::html::push_html(&mut output, events);
