@@ -3,6 +3,8 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::RwLock;
 
+use actix_web::body::BoxBody;
+use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::web::Redirect;
 use actix_web::{Either, HttpRequest, HttpResponse};
@@ -61,6 +63,15 @@ pub enum SiteError {
 
 	#[error("Tera templates error")]
 	TeraError(#[from] tera::Error),
+}
+
+impl actix_web::error::ResponseError for SiteError {
+	fn error_response(&self) -> HttpResponse<BoxBody> {
+		let status_code = self.status_code();
+		HttpResponse::build(status_code) //
+			.insert_header(ContentType::plaintext())
+			.body(format!("{status_code}\n\n{:#?}", self))
+	}
 }
 
 pub struct AlternateUrlMappings {
@@ -354,34 +365,34 @@ impl SiteService {
 		Ok(())
 	}
 
-	pub fn serve_latest_post(&self) -> HttpResponse {
+	pub fn serve_latest_post(&self) -> Result<HttpResponse, SiteError> {
 		let content = self.content.read().expect("SiteContent read lock failed"); // TODO: better error handling
 		let post = content.get_latest_post();
 		let mut context = tera::Context::new();
 		if let Some(post) = post {
 			context.insert("post", post);
 		}
-		HttpResponse::Ok().body(content.template_renderer.render("latest_post.html", &context).unwrap())
+		Ok(HttpResponse::Ok().body(content.template_renderer.render("latest_post.html", &context)?))
 	}
 
-	pub fn serve_posts_by_tag(&self, tag: &Tag) -> HttpResponse {
+	pub fn serve_posts_by_tag(&self, tag: &Tag) -> Result<HttpResponse, SiteError> {
 		let content = self.content.read().expect("SiteContent read lock failed"); // TODO: better error handling
 		let posts = content.get_posts_with_tag_ordered_by_date(tag);
 		let mut context = tera::Context::new();
 		context.insert("tag", tag);
 		context.insert("posts", &posts);
-		HttpResponse::Ok().body(content.template_renderer.render("tag.html", &context).unwrap())
+		Ok(HttpResponse::Ok().body(content.template_renderer.render("tag.html", &context)?))
 	}
 
-	pub fn serve_posts_archive(&self) -> HttpResponse {
+	pub fn serve_posts_archive(&self) -> Result<HttpResponse, SiteError> {
 		let content = self.content.read().expect("SiteContent read lock failed"); // TODO: better error handling
 		let posts = content.get_posts_ordered_by_date();
 		let mut context = tera::Context::new();
 		context.insert("posts", &posts);
-		HttpResponse::Ok().body(content.template_renderer.render("archive.html", &context).unwrap())
+		Ok(HttpResponse::Ok().body(content.template_renderer.render("archive.html", &context)?))
 	}
 
-	pub fn serve_rss_feed(&self) -> HttpResponse {
+	pub fn serve_rss_feed(&self) -> Result<HttpResponse, SiteError> {
 		let content = self.content.read().expect("SiteContent read lock failed"); // TODO: better error handling
 		let base_url = url::Url::parse(&content.rss.url).unwrap();
 		let posts = content.get_posts_ordered_by_date();
@@ -404,10 +415,10 @@ impl SiteService {
 				})
 				.collect::<Vec<rss::Item>>(),
 		);
-		HttpResponse::Ok().content_type("application/rss+xml").body(channel.to_string())
+		Ok(HttpResponse::Ok().content_type("application/rss+xml").body(channel.to_string()))
 	}
 
-	pub fn serve_content_by_url(&self, req: &HttpRequest) -> Option<Either<HttpResponse, Redirect>> {
+	pub fn serve_content_by_url(&self, req: &HttpRequest) -> Result<Option<Either<HttpResponse, Redirect>>, SiteError> {
 		let content = self.content.read().expect("SiteContent read lock failed"); // TODO: better error handling
 		let url = String::from(req.path());
 		match content.get_content_at(&url) {
@@ -415,23 +426,23 @@ impl SiteService {
 				log::debug!("Found page content at {}", req.path());
 				let mut context = tera::Context::new();
 				context.insert("page", page);
-				let rendered = content.template_renderer.render("page.html", &context).unwrap();
-				Some(Either::Left(HttpResponse::Ok().body(rendered)))
+				let rendered = content.template_renderer.render("page.html", &context)?;
+				Ok(Some(Either::Left(HttpResponse::Ok().body(rendered))))
 			}
 			Some(Content::Post(post)) => {
 				log::debug!("Found post content at {}", req.path());
 				let mut context = tera::Context::new();
 				context.insert("post", post);
-				let rendered = content.template_renderer.render("post.html", &context).unwrap();
-				Some(Either::Left(HttpResponse::Ok().body(rendered)))
+				let rendered = content.template_renderer.render("post.html", &context)?;
+				Ok(Some(Either::Left(HttpResponse::Ok().body(rendered))))
 			}
 			Some(Content::Redirect(url)) => {
 				log::debug!("Found redirect at {}", req.path());
-				Some(Either::Right(Redirect::to(url).using_status_code(StatusCode::MOVED_PERMANENTLY)))
+				Ok(Some(Either::Right(Redirect::to(url).using_status_code(StatusCode::MOVED_PERMANENTLY))))
 			}
 			None => {
 				log::debug!("No matching content at {}", req.path());
-				None
+				Ok(None)
 			}
 		}
 	}

@@ -41,12 +41,15 @@ async fn rss_feed(data: web::Data<site::SiteService>) -> impl Responder {
 	data.serve_rss_feed()
 }
 
-async fn site_content(req: HttpRequest, data: web::Data<site::SiteService>) -> Either<HttpResponse, Redirect> {
+async fn site_content(
+	req: HttpRequest,
+	data: web::Data<site::SiteService>,
+) -> Result<Either<HttpResponse, Redirect>, site::SiteError> {
 	log::debug!("GET {} -> fallback to site_content()", req.path());
-	if let Some(response) = data.serve_content_by_url(&req) {
-		response
+	if let Some(response) = data.serve_content_by_url(&req)? {
+		Ok(response)
 	} else {
-		Either::Left(not_found())
+		Ok(Either::Left(not_found()))
 	}
 }
 
