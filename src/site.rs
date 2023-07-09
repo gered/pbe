@@ -67,6 +67,7 @@ pub enum SiteError {
 
 impl actix_web::error::ResponseError for SiteError {
 	fn error_response(&self) -> HttpResponse<BoxBody> {
+		log::error!("Error response: {:?}", self);
 		let status_code = self.status_code();
 		HttpResponse::build(status_code) //
 			.insert_header(ContentType::plaintext())
