@@ -24,6 +24,9 @@ thiserror = "1.0.40"
 tokio = "1"
 url = "2.4.0"
 
+[build-dependencies]
+chrono = "0.4.26"
+
 [profile.release]
 # settings that are mainly intended to reduce the size of the release binary while keeping the release binary tuned
 # for performance. these alone reduce the binary size by over 50%, which is good enough in my opinion ...

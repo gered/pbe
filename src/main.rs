@@ -115,6 +115,12 @@ async fn main() -> anyhow::Result<()> {
 	.map_err(|err| anyhow::anyhow!(err))?;
 
 	println!("PBE - Personal Blog Engine - https://github.com/gered/pbe");
+	println!(
+		"Build version {0}, git hash {1}, built at {2}",
+		env!("CARGO_PKG_VERSION"),
+		env!("GIT_HASH"),
+		env!("BUILD_TS")
+	);
 
 	// manually handling args because
 	// 1) i have very simple needs
