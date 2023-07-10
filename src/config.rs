@@ -2,6 +2,8 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use crate::util::drop_trailing_slash;
+
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Server {
 	pub bind_addr: String,
@@ -94,11 +96,22 @@ pub fn load_content(
 	let mut pages: Pages = load_config(pages_path)?;
 	for page in pages.pages.iter_mut() {
 		page.file_path = [&server_config.pages_path, &page.file_path].iter().collect();
+		drop_trailing_slash(&mut page.url);
+		if let Some(alternate_urls) = &mut page.alternate_urls {
+			for alternate_url in alternate_urls.iter_mut() {
+				drop_trailing_slash(alternate_url);
+			}
+		}
 	}
 	log::info!("Loading posts config from {:?}", posts_path);
 	let mut posts: Posts = load_config(posts_path)?;
 	for post in posts.posts.iter_mut() {
 		post.file_path = [&server_config.posts_path, &post.file_path].iter().collect();
+		if let Some(alternate_urls) = &mut post.alternate_urls {
+			for alternate_url in alternate_urls.iter_mut() {
+				drop_trailing_slash(alternate_url);
+			}
+		}
 	}
 	Ok((pages, posts))
 }

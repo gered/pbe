@@ -22,22 +22,22 @@ async fn latest_posts(data: web::Data<site::SiteService>) -> impl Responder {
 	data.serve_latest_post()
 }
 
-#[actix_web::get("/tag/{tag}/")]
+#[actix_web::get("/tag/{tag}")]
 async fn latest_posts_by_tag(path: web::Path<(String,)>, data: web::Data<site::SiteService>) -> impl Responder {
 	let tag = path.into_inner().0;
-	log::debug!("GET /tag/{0}/ -> latest_posts_by_tag(), tag = {0}", tag);
+	log::debug!("GET /tag/{0} -> latest_posts_by_tag(), tag = {0}", tag);
 	data.serve_posts_by_tag(&tag)
 }
 
-#[actix_web::get("/archive/")]
+#[actix_web::get("/archive")]
 async fn posts_archive(data: web::Data<site::SiteService>) -> impl Responder {
-	log::debug!("GET /archive/ -> posts_archive()");
+	log::debug!("GET /archive -> posts_archive()");
 	data.serve_posts_archive()
 }
 
-#[actix_web::get("/rss/")]
+#[actix_web::get("/rss")]
 async fn rss_feed(data: web::Data<site::SiteService>) -> impl Responder {
-	log::debug!("GET /rss/ -> rss_feed()");
+	log::debug!("GET /rss -> rss_feed()");
 	data.serve_rss_feed()
 }
 
@@ -179,6 +179,7 @@ async fn main() -> anyhow::Result<()> {
 		HttpServer::new(move || {
 			App::new() //
 				.app_data(data.clone())
+				.wrap(actix_web::middleware::NormalizePath::trim())
 				.service(latest_posts)
 				.service(latest_posts_by_tag)
 				.service(posts_archive)

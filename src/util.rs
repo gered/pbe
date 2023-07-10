@@ -28,3 +28,9 @@ pub fn serialize_naivedatetime_to_i64<S: serde::Serializer>(
 ) -> Result<S::Ok, S::Error> {
 	serializer.serialize_i64(value.timestamp())
 }
+
+pub fn drop_trailing_slash(s: &mut String) {
+	if s.ends_with("/") {
+		s.pop();
+	}
+}

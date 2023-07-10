@@ -143,7 +143,7 @@ pub struct Post {
 impl Post {
 	pub fn try_from(value: config::Post, content_renderer: &ContentRenderer) -> Result<Self, SiteError> {
 		let url = format!(
-			"/{:04}/{:02}/{:02}/{}/", //
+			"/{:04}/{:02}/{:02}/{}", //
 			value.date.year(),
 			value.date.month(),
 			value.date.day(),
