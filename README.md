@@ -122,7 +122,7 @@ top-level `pages` key. Each page can contain the following:
 |------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `file_path`      | Yes       | The path (relative to `pages_path` found in `server.yml`) to the HTML, Markdown or plain text content for this page.                                                                                                                                                      |
 | `title`          | Yes       | The title of the page. This is what will be visible on the website itself.                                                                                                                                                                                                |
-| `url`            | Yes       | The URL this page can be accessed at. This is just the path component of the URL, e.g. `/my-page/`.                                                                                                                                                                       |
+| `url`            | Yes       | The URL this page can be accessed at. This is just the path component of the URL, e.g. `/my-page`.                                                                                                                                                                        |
 | `alternate_urls` | No        | A list of alternate URLs this page can be accessed at. If provided, each of these URLs will result in a redirect response to the main page URL. This is provided mainly as an aide in transitioning from another website which may have served content at different URLs. |
 
 An example file may look like the following:
@@ -132,13 +132,13 @@ pages:
 
   - file_path: about.md
     title: About This Site
-    url: /about/
+    url: /about
 
   - file_path: joke.md
     title: Joke
-    url: /joke/
+    url: /joke
     alternate_urls:
-      - /trying-to-be-funny/
+      - /trying-to-be-funny
 ```
 
 ### `posts.yml`
@@ -204,7 +204,7 @@ rss:
 #### Post URLs
 
 Post URLs are automatically derived from a combination of the `date` and `slug` defined for each post using the format
-`/year/month/day/slug/`.
+`/year/month/day/slug`.
 
 For example for the post
 
@@ -215,7 +215,7 @@ date: 2023-03-20 18:01
 slug: lorem-ipsum
 ```
 
-The URL would end up being `/2023/03/20/lorem-ipsum/` (note the trailing slash).
+The URL would end up being `/2023/03/20/lorem-ipsum`.
 
 ## Writing Content
 
@@ -273,7 +273,7 @@ Displays any single page at the individual page's URL. Normally this would displ
 
 ### `tag.html`
 
-Displays posts for a given tag, at the tag's URL `/tag/{tag-name}/`. Normally this would display the tag and then all 
+Displays posts for a given tag, at the tag's URL `/tag/{tag-name}`. Normally this would display the tag and then all 
 the posts in a list format.
 
 | Key     | Type     | Description                                                              |
@@ -283,7 +283,7 @@ the posts in a list format.
 
 ### `archive.html`
 
-Displays all posts, at the archive URL `/archive/`. Normally this would be a simple list of all posts showing their 
+Displays all posts, at the archive URL `/archive`. Normally this would be a simple list of all posts showing their 
 titles, dates, and tags. 
 
 ### `latest_post.html`
@@ -304,7 +304,7 @@ Contains all information about a single post.
 
 | Field          | Type       | Description                                                                                                                                                                                                |
 |----------------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `url`          | `string`   | The post's URL, e.g. `/2023/06/30/hello-world/`                                                                                                                                                            |
+| `url`          | `string`   | The post's URL, e.g. `/2023/06/30/hello-world`                                                                                                                                                             |
 | `title`        | `string`   | The post's title, as defined in `posts.yml`.                                                                                                                                                               |
 | `date`         | `int`      | The date/time of the post, as defined in `posts.yml`, converted to seconds since Jan 1, 1970. You can use [Tera's `date` filter](https://tera.netlify.app/docs/#date) to display this in a formatted way.  |
 | `tags`         | `string[]` | The post's tags, as defined in `posts.yml`. This may be an empty list if no tags were specified for the post.                                                                                              |
@@ -316,7 +316,7 @@ Contains all information about a single page.
 
 | Field          | Type     | Description                                                                                                                                                                                                |
 |----------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `url`          | `string` | The page's URL, as defined in `pages.yml`, e.g. `/my-page/`                                                                                                                                                |
+| `url`          | `string` | The page's URL, as defined in `pages.yml`, e.g. `/my-page`                                                                                                                                                 |
 | `title`        | `string` | The page's title, as defined in `pages.yml`.                                                                                                                                                               |
 | `content_html` | `string` | The page's content, rendered as HTML. Most of the time, you'd want to display this in your template using [Tera's `safe` filter](https://tera.netlify.app/docs/#safe) to ensure HTML tags are not escaped. |
 
