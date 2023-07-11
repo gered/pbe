@@ -70,7 +70,7 @@ impl actix_web::error::ResponseError for SiteError {
 		log::error!("Error response: {:?}", self);
 		let status_code = self.status_code();
 		HttpResponse::build(status_code) //
-			.insert_header(ContentType::plaintext())
+			.content_type(ContentType::plaintext())
 			.body(format!("{status_code}\n\n{:#?}", self))
 	}
 }
@@ -373,7 +373,8 @@ impl SiteService {
 		if let Some(post) = post {
 			context.insert("post", post);
 		}
-		Ok(HttpResponse::Ok().body(content.template_renderer.render("latest_post.html", &context)?))
+		let response_body = content.template_renderer.render("latest_post.html", &context)?;
+		Ok(HttpResponse::Ok().content_type(ContentType::html()).body(response_body))
 	}
 
 	pub fn serve_posts_by_tag(&self, tag: &Tag) -> Result<HttpResponse, SiteError> {
@@ -382,7 +383,8 @@ impl SiteService {
 		let mut context = tera::Context::new();
 		context.insert("tag", tag);
 		context.insert("posts", &posts);
-		Ok(HttpResponse::Ok().body(content.template_renderer.render("tag.html", &context)?))
+		let response_body = content.template_renderer.render("tag.html", &context)?;
+		Ok(HttpResponse::Ok().content_type(ContentType::html()).body(response_body))
 	}
 
 	pub fn serve_posts_archive(&self) -> Result<HttpResponse, SiteError> {
@@ -390,7 +392,8 @@ impl SiteService {
 		let posts = content.get_posts_ordered_by_date();
 		let mut context = tera::Context::new();
 		context.insert("posts", &posts);
-		Ok(HttpResponse::Ok().body(content.template_renderer.render("archive.html", &context)?))
+		let response_body = content.template_renderer.render("archive.html", &context)?;
+		Ok(HttpResponse::Ok().content_type(ContentType::html()).body(response_body))
 	}
 
 	pub fn serve_rss_feed(&self) -> Result<HttpResponse, SiteError> {
@@ -416,7 +419,8 @@ impl SiteService {
 				})
 				.collect::<Vec<rss::Item>>(),
 		);
-		Ok(HttpResponse::Ok().content_type("application/rss+xml").body(channel.to_string()))
+		let response_body = channel.to_string();
+		Ok(HttpResponse::Ok().content_type("application/rss+xml").body(response_body))
 	}
 
 	pub fn serve_content_by_url(&self, req: &HttpRequest) -> Result<Option<Either<HttpResponse, Redirect>>, SiteError> {
@@ -428,14 +432,14 @@ impl SiteService {
 				let mut context = tera::Context::new();
 				context.insert("page", page);
 				let rendered = content.template_renderer.render("page.html", &context)?;
-				Ok(Some(Either::Left(HttpResponse::Ok().body(rendered))))
+				Ok(Some(Either::Left(HttpResponse::Ok().content_type(ContentType::html()).body(rendered))))
 			}
 			Some(Content::Post(post)) => {
 				log::debug!("Found post content at {}", req.path());
 				let mut context = tera::Context::new();
 				context.insert("post", post);
 				let rendered = content.template_renderer.render("post.html", &context)?;
-				Ok(Some(Either::Left(HttpResponse::Ok().body(rendered))))
+				Ok(Some(Either::Left(HttpResponse::Ok().content_type(ContentType::html()).body(rendered))))
 			}
 			Some(Content::Redirect(url)) => {
 				log::debug!("Found redirect at {}", req.path());
