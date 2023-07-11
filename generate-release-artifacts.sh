@@ -14,6 +14,8 @@ cargo install --path . --root ./artifacts/
 cargo install --path ./syntax_to_css/ --root ./artifacts/
 
 tar -cvf $package_filename \
+    README.md \
+    LICENSE \
     example-site \
     -C ./artifacts/bin \
     pbe \
