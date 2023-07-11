@@ -2,4 +2,4 @@
 .DS_Store
 /.idea
 /artifacts
-/release.tar.gz
+/*.tar.gz
