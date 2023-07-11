@@ -2,56 +2,15 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 use actix_files::Files;
-use actix_web::web::Redirect;
-use actix_web::{web, App, Either, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpServer};
 use anyhow::Context;
 
 mod config;
 mod markdown;
+mod routes;
 mod site;
 mod util;
 mod watcher;
-
-fn not_found() -> HttpResponse {
-	HttpResponse::NotFound().body("not found")
-}
-
-#[actix_web::route("/", method = "GET", method = "HEAD")]
-async fn latest_posts(data: web::Data<site::SiteService>) -> impl Responder {
-	log::debug!("GET / -> latest_posts()");
-	data.serve_latest_post()
-}
-
-#[actix_web::route("/tag/{tag}", method = "GET", method = "HEAD")]
-async fn latest_posts_by_tag(path: web::Path<(String,)>, data: web::Data<site::SiteService>) -> impl Responder {
-	let tag = path.into_inner().0;
-	log::debug!("GET /tag/{0} -> latest_posts_by_tag(), tag = {0}", tag);
-	data.serve_posts_by_tag(&tag)
-}
-
-#[actix_web::route("/archive", method = "GET", method = "HEAD")]
-async fn posts_archive(data: web::Data<site::SiteService>) -> impl Responder {
-	log::debug!("GET /archive -> posts_archive()");
-	data.serve_posts_archive()
-}
-
-#[actix_web::route("/rss", method = "GET", method = "HEAD")]
-async fn rss_feed(data: web::Data<site::SiteService>) -> impl Responder {
-	log::debug!("GET /rss -> rss_feed()");
-	data.serve_rss_feed()
-}
-
-async fn site_content(
-	req: HttpRequest,
-	data: web::Data<site::SiteService>,
-) -> Result<Either<HttpResponse, Redirect>, site::SiteError> {
-	log::debug!("GET {} -> fallback to site_content()", req.path());
-	if let Some(response) = data.serve_content_by_url(&req)? {
-		Ok(response)
-	} else {
-		Ok(Either::Left(not_found()))
-	}
-}
 
 fn spawn_watcher(
 	watch_paths: Vec<PathBuf>,
@@ -180,12 +139,12 @@ async fn main() -> anyhow::Result<()> {
 			App::new() //
 				.app_data(data.clone())
 				.wrap(actix_web::middleware::NormalizePath::trim())
-				.service(latest_posts)
-				.service(latest_posts_by_tag)
-				.service(posts_archive)
-				.service(rss_feed)
+				.service(routes::latest_posts)
+				.service(routes::latest_posts_by_tag)
+				.service(routes::posts_archive)
+				.service(routes::rss_feed)
 				.service(Files::new("/", &server_config.static_files_path))
-				.default_service(web::get().to(site_content))
+				.default_service(web::get().to(routes::site_content))
 		})
 		.bind((server_config.bind_addr.clone(), server_config.bind_port))
 		.with_context(|| format!("Binding HTTP server on {}:{}", server_config.bind_addr, server_config.bind_port))?
