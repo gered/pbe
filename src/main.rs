@@ -16,26 +16,26 @@ fn not_found() -> HttpResponse {
 	HttpResponse::NotFound().body("not found")
 }
 
-#[actix_web::get("/")]
+#[actix_web::route("/", method = "GET", method = "HEAD")]
 async fn latest_posts(data: web::Data<site::SiteService>) -> impl Responder {
 	log::debug!("GET / -> latest_posts()");
 	data.serve_latest_post()
 }
 
-#[actix_web::get("/tag/{tag}")]
+#[actix_web::route("/tag/{tag}", method = "GET", method = "HEAD")]
 async fn latest_posts_by_tag(path: web::Path<(String,)>, data: web::Data<site::SiteService>) -> impl Responder {
 	let tag = path.into_inner().0;
 	log::debug!("GET /tag/{0} -> latest_posts_by_tag(), tag = {0}", tag);
 	data.serve_posts_by_tag(&tag)
 }
 
-#[actix_web::get("/archive")]
+#[actix_web::route("/archive", method = "GET", method = "HEAD")]
 async fn posts_archive(data: web::Data<site::SiteService>) -> impl Responder {
 	log::debug!("GET /archive -> posts_archive()");
 	data.serve_posts_archive()
 }
 
-#[actix_web::get("/rss")]
+#[actix_web::route("/rss", method = "GET", method = "HEAD")]
 async fn rss_feed(data: web::Data<site::SiteService>) -> impl Responder {
 	log::debug!("GET /rss -> rss_feed()");
 	data.serve_rss_feed()
